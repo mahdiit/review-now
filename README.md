@@ -10,13 +10,13 @@ Use the [Skills CLI](https://github.com/vercel-labs/skills). The command is **`n
 
 ```bash
 # Install both skills into the current project
-npx skills add benyaminsalimi/review-now --agent codex --skill review-now review-now-frontend
+npx skills add mehdiit/review-now --agent codex --skill review-now review-now-frontend
 
 # Install globally instead
-npx skills add benyaminsalimi/review-now --agent codex --skill review-now review-now-frontend --global
+npx skills add mehdiit/review-now --agent codex --skill review-now review-now-frontend --global
 
 # Inspect available skills without installing
-npx skills add benyaminsalimi/review-now --list
+npx skills add mehdiit/review-now --list
 ```
 
 The GitHub commands work once this change is pushed to the repository. To install the current local checkout now, run this from the project where you want to use it:
@@ -39,7 +39,7 @@ $review-now-frontend Review the UI changes in my working tree.
 
 The two former Claude slash-command workflows are modes of `$review-now`. You can also ask in ordinary language to review a branch or local changes. Request a report or JSON output to skip the interactive walkthrough.
 
-When permitted and available, Codex delegates independent read-only review passes. Otherwise it runs them sequentially. After validating and deduplicating findings, it shows the total and a table with stable finding codes, priorities, locations, summaries, and statuses. It then walks through each finding with a code excerpt and a **Skip / Show solution / Fix** menu, waiting for your choice before advancing. Show solution previews the change and returns to the same menu without editing. You can also ask questions, request a custom fix, or stop the walkthrough. The final summary repeats the table with updated statuses and totals.
+When permitted and available, Codex delegates independent read-only review passes. As each reviewer finishes, Codex asks it for its total findings and priority breakdown, then reconciles that count with its structured result before validating and deduplicating findings. It shows the resulting total and a table with stable finding codes, priorities, locations, summaries, and statuses. It then walks through each finding with a code excerpt and a keyboard- and mouse-accessible radio selector for **Skip / Fix / Show solution**, waiting for your choice before advancing. Show solution previews the change and returns to the same selector without editing. You can also ask questions, request a custom fix, or stop the walkthrough. The final summary repeats the table with updated statuses and totals.
 
 Reviews begin read-only. Fixes require authorization. PR fixes are committed only when the user explicitly chooses apply-and-commit or has already authorized commits; local fixes remain uncommitted unless requested. Unrelated edits and staged changes are preserved. No pushes or externally posted comments are implied.
 
