@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Now"
+  short_description: "Interactive PR and local code review"
+  default_prompt: "Use $review-now to review my uncommitted changes and walk through validated findings."

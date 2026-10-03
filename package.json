@@ -1,0 +1,14 @@
+{
+  "name": "review-now",
+  "version": "2.0.1",
+  "private": true,
+  "description": "Claude Code plugin and installable Codex review skills and agents",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-skills.mjs",
+    "check": "node scripts/build-skills.mjs --check",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}

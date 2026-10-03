@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Review"
+  short_description: "Review any frontend stack for concrete regressions"
+  default_prompt: "Use $review-now-frontend to review the frontend changes in my working tree."

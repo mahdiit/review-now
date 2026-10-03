@@ -1,222 +1,127 @@
 # review-now
 
-Interactive code review plugin for Claude Code with multi-agent analysis and conversational walkthrough.
+Interactive code review for **Codex and Claude Code**. Review PR branches or local changes, validate findings, and walk through fixes one at a time.
 
-## What is review-now?
+The default review combines general correctness, security, and frontend analysis. The frontend reviewer supports any UI stack: React/Next.js, Vue/Nuxt, Angular, Svelte/SvelteKit, Solid, Qwik, Astro, web components, plain HTML/CSS/JS, server templates, native/mobile, and desktop/hybrid UIs. It checks behavior, accessibility, responsive layout, rendering, performance, security, compatibility, and localization, using the project's installed framework versions. Unknown stacks receive the shared checks rather than being skipped.
 
-A Claude Code plugin that transforms code review from reading static reports into having interactive conversations. Walk through findings one at a time, apply fixes inline, ask questions, and move fast through your review queue.
+## Install for Codex
 
-Built for two scenarios:
-1. **Reviewing team PRs** - Fast, interactive walkthrough of all changes
-2. **Reviewing AI-generated code** - Catch issues in code you prompted AI to write
-
-## Installation
-
-### From GitHub (Recommended)
+Use the [Skills CLI](https://github.com/vercel-labs/skills). The command is **`npx skills`** (plural).
 
 ```bash
-# Add the marketplace
+# Install both skills into the current project
+npx skills add benyaminsalimi/review-now --agent codex --skill review-now review-now-frontend
+
+# Install globally instead
+npx skills add benyaminsalimi/review-now --agent codex --skill review-now review-now-frontend --global
+
+# Inspect available skills without installing
+npx skills add benyaminsalimi/review-now --list
+```
+
+The GitHub commands work once this change is pushed to the repository. To install the current local checkout now, run this from the project where you want to use it:
+
+```bash
+npx skills add /path/to/review-now --agent codex --skill review-now review-now-frontend
+```
+
+On Windows, use the checkout path, for example `D:\TT\review-now`. Add `--copy` if you prefer copied files over symlinks. Each skill is self-contained and includes its reviewer instructions; installing just `review-now` still includes all three reviewers. The focused frontend skill works independently.
+
+Codex skill packaging follows the [official skill format](https://learn.chatgpt.com/docs/build-skills): a `SKILL.md` entrypoint, bundled references/scripts, and `agents/openai.yaml` UI metadata. Reload the Codex session if newly installed skills are not visible.
+
+### Use in Codex
+
+```text
+$review-now pr feature/user-auth main
+$review-now uncommitted
+$review-now-frontend Review the UI changes in my working tree.
+```
+
+The two former Claude slash-command workflows are modes of `$review-now`. You can also ask in ordinary language to review a branch or local changes. Request a report or JSON output to skip the interactive walkthrough.
+
+When permitted and available, Codex delegates independent read-only review passes. Otherwise it runs them sequentially. After validating and deduplicating findings, it shows the total and a table with stable finding codes, priorities, locations, summaries, and statuses. It then walks through each finding with a code excerpt and a **Skip / Show solution / Fix** menu, waiting for your choice before advancing. Show solution previews the change and returns to the same menu without editing. You can also ask questions, request a custom fix, or stop the walkthrough. The final summary repeats the table with updated statuses and totals.
+
+Reviews begin read-only. Fixes require authorization. PR fixes are committed only when the user explicitly chooses apply-and-commit or has already authorized commits; local fixes remain uncommitted unless requested. Unrelated edits and staged changes are preserved. No pushes or externally posted comments are implied.
+
+### Optional native Codex agents
+
+`npx skills add` installs skills and bundled agent assets; it does **not** register standalone native Codex agents. Reviews work without this extra setup by passing the bundled instructions to available subagents.
+
+For Codex versions supporting [standalone custom agent TOML files](https://learn.chatgpt.com/docs/agent-configuration/subagents), register the three native reviewers using the installed main skill's script (Node.js 20+):
+
+```bash
+# Project installation: run from the project receiving the agents
+node .agents/skills/review-now/scripts/install-agents.mjs --dry-run
+node .agents/skills/review-now/scripts/install-agents.mjs
+
+# Or run from this source checkout and select another project
+node skills/review-now/scripts/install-agents.mjs --project /path/to/project
+
+# Global agent installation; honors CODEX_HOME when set
+node skills/review-now/scripts/install-agents.mjs --global
+```
+
+For a globally installed skill, use the script under your Codex skills directory (typically `~/.codex/skills/review-now/scripts/install-agents.mjs`; check the Skills CLI installation output).
+
+The installer copies `review_now_general.toml`, `review_now_security.toml`, and `review_now_frontend.toml` into project `.codex/agents/` or global `$CODEX_HOME/agents/` (default `~/.codex/agents/`). It inherits your model configuration, uses a read-only sandbox, leaves `config.toml` alone, skips identical files, and refuses to overwrite differing files. Back up or move an older differing role before updating it. Restart Codex to load newly registered agents. Older clients can use the bundled prompt fallback.
+
+## Install for Claude Code
+
+The original plugin, commands, and agent metadata remain available:
+
+```bash
 claude plugin marketplace add benyaminsalimi/review-now
-
-# Install the plugin
 claude plugin install review-now@review-now-marketplace
 ```
 
-### Local Development
-
-```bash
-git clone https://github.com/benyaminsalimi/review-now.git
-cd review-now
-claude plugin marketplace add ./
-claude plugin install review-now@review-now-marketplace
-```
-
-## Commands
-
-### `/review-now:pr <source-branch> <target-branch>`
-
-Interactive PR review with automatic commits for each fix.
-
-```bash
+```text
 /review-now:pr feature/user-auth main
-```
-
-**Features:**
-- Fetches both branches and compares changes
-- Multi-agent analysis (security + general + frontend)
-- Interactive walkthrough with options for each finding
-- Automatic git commits when fixes are applied
-
-**Interactive Options:**
-- **Apply fix** — applies recommended fix and commits automatically
-- **Show solution** — preview the proposed change before deciding
-- **Custom fix** — type or paste your own fix
-- **Ask question** — ask deeper questions about the finding
-- **Skip** — move to next finding
-- **Skip all** — stop walkthrough, show summary
-
-### `/review-now:uncommitted`
-
-Interactive review of all uncommitted changes (no arguments needed).
-
-```bash
 /review-now:uncommitted
 ```
 
-**Features:**
-- Reviews staged + unstaged + untracked changes
-- Multi-agent analysis (security + general + frontend)
-- Interactive walkthrough with options for each finding
-- Fixes applied to working directory (no auto-commit)
+Claude PR mode retains its existing automatic commit behavior after selecting a fix. Both clients now share the expanded frontend reviewer.
 
-**Interactive Options:**
-- **Apply fix** — applies recommended fix to working directory
-- **Show solution** — preview the proposed change before deciding
-- **Custom fix** — type or paste your own fix
-- **Ask question** — ask deeper questions about the finding
-- **Skip** — move to next finding
-- **Skip all** — stop walkthrough, show summary
+## Review rules and findings
 
-## How It Works
-
-### Multi-Agent Review Pipeline
-
-```
-Pre-flight checks
-       |
-Discover custom guidelines (REVIEW_GUIDELINES.md, AGENTS.md)
-       |
-Gather changes (diff, files, commits)
-       |
-Launch 3 agents in parallel
-  |- Security review agent (Anthropic guidelines)
-  |- General review agent (Codex patterns)
-  |- Frontend/Angular review agent (Angular official docs)
-       |
-Deduplicate findings
-       |
-Validate with lightweight agents (filter false positives)
-       |
-Interactive walkthrough
-  |- Apply fix / Show solution / Custom fix / Ask question / Skip
-  |- (PR mode: auto-commits after each fix)
-       |
-Final summary with verdict
-```
-
-### Review Strategy
-
-The plugin automatically picks its strategy:
-
-| `REVIEW_GUIDELINES.md` in repo root? | Strategy |
-|---------------------------------------|----------|
-| Yes | Reviews using your custom guidelines. No agents. |
-| No | Dispatches 3 specialized agents in parallel. |
-
-## Agents
-
-### Security Review Agent
-Based on [Anthropic's security review guidelines](https://github.com/anthropics/claude-code-security-review). Focuses on high-confidence vulnerabilities: SQL injection, authentication bypasses, hardcoded secrets, crypto issues, XSS, and data exposure.
-
-### General Review Agent
-Adapted from [OpenAI Codex review patterns](https://github.com/openai/codex). Focuses on correctness, maintainability, logic errors, error handling, and code quality.
-
-### Frontend/Angular Review Agent
-Built from [Angular's official LLM context](https://angular.dev/assets/context/llms-full.txt). Focuses on signal-based architecture, change detection, modern template syntax, component patterns, and performance.
-
-## Priority System
-
-All agents use P0-P3 scale:
+A root `REVIEW_GUIDELINES.md` replaces the default review strategy with your custom rules. Scoped `AGENTS.md` instructions apply to files in their directory and descendants. Findings should describe actual defects, not unsupported assumptions or framework modernization preferences.
 
 | Priority | Meaning |
-|----------|---------|
-| **P0** | Drop everything. Blocking release/operations. |
-| **P1** | Urgent. Fix in the next cycle. |
-| **P2** | Normal. Fix eventually. |
-| **P3** | Low. Nice to have. |
+| --- | --- |
+| P0 | Universal release or operation blocker |
+| P1 | Urgent, serious defect |
+| P2 | Normal actionable defect |
+| P3 | Minor concrete defect |
 
-## Verdict
+The final Codex verdict uses unresolved findings: **REQUEST CHANGES** for P0/P1, **NEEDS DISCUSSION** for P2 with confidence greater than 0.85, otherwise **APPROVE**. Incomplete reviews disclose limitations and withhold approval. A supported older Angular API is not automatically a bug.
 
-| Verdict | Condition |
-|---------|-----------|
-| **REQUEST CHANGES** | Any P0 or P1 findings |
-| **NEEDS DISCUSSION** | Any P2 findings with confidence > 0.85 |
-| **APPROVE** | Everything else |
+## Development
 
-## Custom Guidelines
-
-### REVIEW_GUIDELINES.md
-
-Place a `REVIEW_GUIDELINES.md` file in your repo root to define custom review rules. The plugin will use your guidelines instead of running agents.
-
-### AGENTS.md
-
-Place `AGENTS.md` files in any directory to define scoped rules. The plugin discovers all `AGENTS.md` files and checks changed files against rules in their scope (directory and subdirectories).
-
-## Building Custom Agents
-
-See the `agents/` directory for examples. Each agent is a markdown file with:
-- Frontmatter (name, description, model, tools)
-- System prompt with review guidelines
-- JSON output schema
-
-Create domain-specific agents for your tech stack:
-- Backend frameworks (Django, Rails, Spring)
-- Mobile (iOS, Android, React Native)
-- Infrastructure (Terraform, Kubernetes)
-- Database patterns
-- Security models specific to your org
-
-## File Structure
-
-```
-review-now/
-├── .claude-plugin/
-│   ├── plugin.json                      # Plugin manifest
-│   └── marketplace.json                 # Marketplace configuration
-├── commands/
-│   ├── review_now_pr.md                 # PR review orchestrator
-│   └── review_now_uncommitted.md        # Uncommitted changes orchestrator
-├── agents/
-│   ├── security-review.md               # Security agent
-│   ├── general-review.md                # General review agent
-│   └── frontend-review.md               # Frontend/Angular agent
-├── LICENSE
-└── README.md
+```bash
+npm run build
+npm run check
+npm test
 ```
 
-## Contributing
+Edit canonical reviewer prompts in `agents/*.md`, then run the build to regenerate self-contained Codex references and native TOML assets. Commit generated resources so Git-based installation needs no build or dependencies. The npm manifest is private and provides maintenance commands; installation uses the public Skills CLI, not a separately published review-now npm package.
 
-Contributions welcome! We're open to:
+```text
+.claude-plugin/                  Claude plugin and marketplace manifests
+commands/pr.md                  Claude PR review workflow
+commands/uncommitted.md         Claude local review workflow
+agents/*-review.md              Canonical reviewer prompts (Claude metadata)
+skills/review-now/
+  SKILL.md                      Codex PR/local review workflow
+  agents/openai.yaml            Codex UI metadata
+  references/                   Self-contained mode and reviewer instructions
+  assets/agents/*.toml           Standalone native Codex agent definitions
+  scripts/install-agents.mjs     Optional native agent installer
+skills/review-now-frontend/      Independent frontend review skill
+scripts/build-skills.mjs         Generates Codex resources from canonical prompts
+tests/install-agents.test.mjs    Installer behavior checks
+```
 
-**Code Contributions:**
-- Additional language/framework agents (Python, Go, Rust, etc.)
-- Better false positive filtering
-- Custom validation rules
-- Web UI for review management
-- Performance improvements
+## License and acknowledgements
 
-**Hooks:**
-- Pre-commit hooks for code review
-- Post-review automation hooks
-- Custom workflow integrations
-- Share your hooks in discussions!
+MIT; see [LICENSE](LICENSE).
 
-**Issues & Discussions:**
-- Bug reports
-- Feature requests
-- Agent improvement suggestions
-- Share your use cases and custom agents
-
-Open an issue or PR on [GitHub](https://github.com/benyaminsalimi/review-now)!
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Acknowledgements
-
-This plugin was inspired by and built upon:
-- **Security Agent**: [claude-code-security-review](https://github.com/anthropics/claude-code-security-review) by Anthropic
-- **General Review Agent**: [OpenAI Codex](https://github.com/openai/codex) review patterns
-- **Frontend Agent**: [Angular LLM Context](https://angular.dev/assets/context/llms-full.txt)
+Review guidance was inspired by [Anthropic's security review](https://github.com/anthropics/claude-code-security-review), [OpenAI Codex](https://github.com/openai/codex), and [Angular's official context](https://angular.dev/assets/context/llms-full.txt). The frontend guidance now applies shared UI checks and stack-specific review instead of assuming Angular.
